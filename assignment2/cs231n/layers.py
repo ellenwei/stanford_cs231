@@ -179,7 +179,21 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        #compute mean and var
+        minibatch_mean = np.mean(x, axis = 0) #shape of [D,], mean of each coloumn
+        minibatch_var = np.var(x, axis = 0) #shape of [D,], variance of each column
+        #normalize input data 
+        sqrtvar = np.sqrt(minibatch_var + eps)
+        invsqrt = 1/sqrtvar
+        x_normalized = (x - minibatch_mean) * invsqrt
+        #scale and shift data
+        out = gamma * x_normalized + beta
+        #update running average and variance
+        running_mean = momentum * running_mean + (1 - momentum) * minibatch_mean
+        running_var = momentum * running_var + (1 - momentum) * minibatch_var
+        #store intermediate values into cache for computing backwards gradients
+        cache = (gamma, beta, minibatch_mean, minibatch_var, sqrtvar, invsqrt, x_normalized, x, eps)
+
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -190,7 +204,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        scale = gamma / (np.sqrt(running_var  + eps))
+        out = x * scale + (beta - running_mean * scale)
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
