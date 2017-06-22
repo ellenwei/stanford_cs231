@@ -183,6 +183,9 @@ class FullyConnectedNet(object):
             self.params['gamma1'] = np.ones(input_dim)
             self.params['beta1'] = np.zeros(input_dim)
         for index, current_hidden_dim in enumerate(hidden_dims):
+            if self.use_batchnorm and index + 2 != self.num_layers:
+                self.params['gamma%d' %(index + 2)] = np.ones(current_hidden_dim)
+                self.params['beta%d' %(index + 2)] = np.zeros(current_hidden_dim)
             self.params['W' + str(index + 1)] = weight_scale * np.random.randn(current_input_dim, current_hidden_dim)
             self.params['b' + str(index + 1)] = weight_scale * np.zeros(current_hidden_dim)
             current_input_dim = current_hidden_dim
@@ -249,6 +252,7 @@ class FullyConnectedNet(object):
         ############################################################################
         current_layer_input = X
         cacheList = []
+        cacheList_dropout = [] 
         
         #compute forward pass for (L - 1) affine-relu layers 
         for i in range(self.num_layers - 1):
@@ -301,10 +305,19 @@ class FullyConnectedNet(object):
           array_index = i
           #L2 regulation
           loss += 0.5 * self.reg * np.sum(self.params['W' + str(array_index + 1)] * self.params['W' + str(array_index + 1)])
+          if self.use_dropout:
+            dout_current = dropout_backward(dout_current, cacheList_dropout[array_index])
           dx, dw, db = affine_relu_backward(dout_current, cacheList[array_index])
+        
+          if self.use_batchnorm:
+            dx, dgamma, dbeta = batchnorm_backward(dx, cacheList_batch[array_index])
             
-          grads['W' + str(array_index + 1)] = dw + self.reg * self.params['W' + str(array_index + 1)]
+          grads['W' + str(array_index + 1)] = dw + self.reg * self.params['W' + str(array_index + 1)]    
           grads['b' + str(array_index + 1)] = db
+          
+          if self.use_batchnorm:
+            grads['gamma%d'%(array_index+1)] = dgamma
+            grads['beta%d'%(array_index+1)] = dbeta
             
           dout_current = dx
         ############################################################################
